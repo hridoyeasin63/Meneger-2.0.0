@@ -52,7 +52,6 @@ android {
     }
     debug {
       if (file("${rootDir}/debug.keystore").exists()) {
-        signingConfig = signingConfigs.getByName("debugConfig")
       }
     }
   }
