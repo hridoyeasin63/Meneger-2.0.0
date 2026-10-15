@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "UserDataSync": {
+      "title": "UserDataSync",
+      "description": "User synchronized financial manager data including transactions, budget, notices, and market items",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who owns this data"
+        },
+        "dataJson": {
+          "type": "string",
+          "description": "Serialized JSON string of the complete user database"
+        },
+        "version": {
+          "type": "integer",
+          "description": "Data schema version"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Document creation timestamp. Client must provide FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Document last update timestamp. Client must provide FieldValue.serverTimestamp()"
+        }
+      },
+      "required": [
+        "userId",
+        "dataJson",
+        "version",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/userData/{docId}": {
+      "schema": "UserDataSync",
+      "description": "User synced data documents scoped strictly to the authenticated user"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Meneger 2.0",
+  "description": "A complete and professional all-in-one Finance Manager application.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
