@@ -574,27 +574,31 @@ class FinanceViewModel(
 
         // Observe local database changes and upload to cloud if signed in
         viewModelScope.launch(Dispatchers.IO) {
-            val dbChanges = combine(
-                listOf(
-                    transactions,
-                    persons,
-                    notices,
-                    profile,
-                    marketItems,
-                    categories,
-                    expenses,
-                    userPreferences,
-                    trashItems
-                )
-            ) { _ ->
-                System.currentTimeMillis()
-            }
-            combine(dbChanges, isLocalDataLoadedState) { changeTime, loaded ->
-                if (loaded) changeTime else 0L
-            }.collect { time ->
-                if (time > 0L && !isSyncingFromCloud) {
-                    pushDataToCloud()
+            try {
+                val dbChanges = combine(
+                    listOf(
+                        transactions,
+                        persons,
+                        notices,
+                        profile,
+                        marketItems,
+                        categories,
+                        expenses,
+                        userPreferences,
+                        trashItems
+                    )
+                ) { _ ->
+                    System.currentTimeMillis()
                 }
+                combine(dbChanges, isLocalDataLoadedState) { changeTime, loaded ->
+                    if (loaded) changeTime else 0L
+                }.collect { time ->
+                    if (time > 0L && !isSyncingFromCloud) {
+                        pushDataToCloud()
+                    }
+                }
+            } catch (t: Throwable) {
+                t.printStackTrace()
             }
         }
 
@@ -2312,14 +2316,25 @@ fun AppHeader(
     var passwordInput by remember { mutableStateOf("") }
 
     val coroutineScope = rememberCoroutineScope()
-    val credentialManager = remember { CredentialManager.create(context) }
+    val credentialManager = remember(context) {
+        try {
+            CredentialManager.create(context)
+        } catch (t: Throwable) {
+            null
+        }
+    }
     var isSigningIn by remember { mutableStateOf(false) }
 
     fun launchGoogleSignIn() {
+        val cm = credentialManager
+        if (cm == null) {
+            Toast.makeText(context, "Credential Manager is unavailable on this device", Toast.LENGTH_SHORT).show()
+            return
+        }
         val clientId = try {
             val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
             if (resId != 0) context.getString(resId) else context.getString(R.string.default_web_client_id)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Toast.makeText(context, "Google Sign-In configuration missing: default_web_client_id not found", Toast.LENGTH_LONG).show()
             return
         }
@@ -2335,13 +2350,13 @@ fun AppHeader(
                     Toast.makeText(context, "Activity context is unavailable", Toast.LENGTH_SHORT).show()
                     return@launch
                 }
-                val result = credentialManager.getCredential(activity, request)
+                val result = cm.getCredential(activity, request)
                 val credential = result.credential
                 if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                     val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
                     val authCredential = GoogleAuthProvider.getCredential(googleIdToken, null)
                     FirebaseAuth.getInstance().signInWithCredential(authCredential).await()
-                    viewModel.currentUserState = FirebaseAuth.getInstance().currentUser
+                    viewModel.currentUserState = try { FirebaseAuth.getInstance().currentUser } catch (e: Throwable) { null }
                     Toast.makeText(context, "গুগল সাইন-ইন সফল হয়েছে! 🎉", Toast.LENGTH_SHORT).show()
                     showAuthDialog = false
                 } else {
@@ -2349,9 +2364,9 @@ fun AppHeader(
                 }
             } catch (e: GetCredentialCancellationException) {
                 android.util.Log.w("Auth", "Google Sign-In flow cancelled or dismissed: ${e.message}", e)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 android.util.Log.e("Auth", "Google Sign-In failed", e)
-                Toast.makeText(context, "সাইন-ইন ব্যর্থ হয়েছে: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "সাইন-ইন ব্যর্থ হয়েছে: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
             } finally {
                 isSigningIn = false
             }
@@ -2359,27 +2374,39 @@ fun AppHeader(
     }
 
     LaunchedEffect(Unit) {
-        if (FirebaseAuth.getInstance().currentUser == null) {
-            try {
-                val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
-                val clientId = if (resId != 0) context.getString(resId) else context.getString(R.string.default_web_client_id)
-                val googleIdOption = GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(true)
-                    .setServerClientId(clientId)
-                    .setAutoSelectEnabled(true)
-                    .build()
-                val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
-                val result = credentialManager.getCredential(context, request)
-                val credential = result.credential
-                if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
-                    val authCredential = GoogleAuthProvider.getCredential(googleIdToken, null)
-                    FirebaseAuth.getInstance().signInWithCredential(authCredential).await()
-                    viewModel.currentUserState = FirebaseAuth.getInstance().currentUser
+        try {
+            val user = try { FirebaseAuth.getInstance().currentUser } catch (e: Throwable) { null }
+            if (user != null) {
+                viewModel.currentUserState = user
+            } else {
+                val cm = credentialManager ?: return@LaunchedEffect
+                val activity = context.findActivity() ?: return@LaunchedEffect
+                val clientId = try {
+                    val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+                    if (resId != 0) context.getString(resId) else context.getString(R.string.default_web_client_id)
+                } catch (e: Throwable) {
+                    null
                 }
-            } catch (e: Exception) {
-                // Ignore silent auto-sign in failure
+                if (!clientId.isNullOrBlank()) {
+                    val googleIdOption = GetGoogleIdOption.Builder()
+                        .setFilterByAuthorizedAccounts(true)
+                        .setServerClientId(clientId)
+                        .setAutoSelectEnabled(true)
+                        .build()
+                    val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
+                    val result = cm.getCredential(activity, request)
+                    val credential = result.credential
+                    if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                        val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
+                        val authCredential = GoogleAuthProvider.getCredential(googleIdToken, null)
+                        FirebaseAuth.getInstance().signInWithCredential(authCredential).await()
+                        viewModel.currentUserState = try { FirebaseAuth.getInstance().currentUser } catch (e: Throwable) { null }
+                    }
+                }
             }
+        } catch (t: Throwable) {
+            // Silently ignore silent auto-sign in failure on launch
+            android.util.Log.d("Auth", "Silent auto-sign in skipped: ${t.message}")
         }
     }
 
@@ -3112,8 +3139,8 @@ fun AppHeader(
                                                     viewModel.logoutAndClearLocal {
                                                         drawerScope.launch {
                                                             try {
-                                                                credentialManager.clearCredentialState(ClearCredentialStateRequest())
-                                                            } catch (e: Exception) {
+                                                                credentialManager?.clearCredentialState(ClearCredentialStateRequest())
+                                                            } catch (e: Throwable) {
                                                                 android.util.Log.e("Auth", "Failed to clear credential state", e)
                                                             }
                                                             Toast.makeText(context, "লগআউট করা হয়েছে এবং লোকাল ডাটা ক্লিয়ার করা হয়েছে।", Toast.LENGTH_LONG).show()

@@ -126,7 +126,8 @@ class MarketViewModel(private val repository: MarketItemRepository) : ViewModel(
                 modelClass: Class<T>,
                 extras: CreationExtras
             ): T {
-                val application = checkNotNull(extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
+                val application = extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]
+                    ?: throw IllegalStateException("Application context is not available in CreationExtras")
                 val database = AppDatabase.getDatabase(application)
                 val repository = MarketItemRepository(database.marketItemDao())
                 return MarketViewModel(repository) as T
