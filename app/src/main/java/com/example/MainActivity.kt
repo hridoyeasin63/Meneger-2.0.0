@@ -2501,499 +2501,651 @@ fun AppHeader(
                 decorFitsSystemWindows = false
             )
         ) {
+            var drawerVisible by remember { mutableStateOf(false) }
+            val drawerScope = rememberCoroutineScope()
+            fun closeDrawer() {
+                drawerVisible = false
+                drawerScope.launch {
+                    kotlinx.coroutines.delay(200)
+                    onShowDrawerChange(false)
+                }
+            }
+
+            LaunchedEffect(Unit) {
+                drawerVisible = true
+            }
+
+            androidx.activity.compose.BackHandler {
+                closeDrawer()
+            }
+
             var drawerDragX by remember { mutableStateOf(0f) }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .clickable { onShowDrawerChange(false) }
-                    .pointerInput(Unit) {
-                        detectHorizontalDragGestures(
-                            onDragStart = { drawerDragX = 0f },
-                            onDragEnd = {
-                                if (drawerDragX > 100f) {
-                                    onShowDrawerChange(false)
-                                }
-                            },
-                            onDragCancel = { drawerDragX = 0f },
-                            onHorizontalDrag = { change, dragAmount ->
-                                change.consume()
-                                drawerDragX += dragAmount
-                                if (drawerDragX > 100f) {
-                                    onShowDrawerChange(false)
-                                }
-                            }
-                        )
-                    }
+                    .background(Color.Black.copy(alpha = if (drawerVisible) 0.5f else 0f))
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) { closeDrawer() }
             ) {
-                var animatedState by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) {
-                    animatedState = true
-                }
-
                 AnimatedVisibility(
-                    visible = animatedState,
-                    enter = slideInHorizontally(
-                        initialOffsetX = { it }
-                    ),
-                    exit = slideOutHorizontally(
-                        targetOffsetX = { it }
-                    ),                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(320.dp)
-                        .align(Alignment.CenterEnd)
-                        .clickable(enabled = false) { }
-                        .pointerInput(Unit) {
-                            detectHorizontalDragGestures(
-                                onDragStart = { drawerDragX = 0f },
-                                onDragEnd = {
-                                    if (drawerDragX > 100f) {
-                                        onShowDrawerChange(false)
-                                    }
-                                },
-                                onDragCancel = { drawerDragX = 0f },
-                                onHorizontalDrag = { change, dragAmount ->
-                                    change.consume()
-                                    drawerDragX += dragAmount
-                                    if (drawerDragX > 100f) {
-                                        onShowDrawerChange(false)
-                                    }
-                                }
-                            )
-                        }
+                    visible = drawerVisible,
+                    enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+                    exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+                    modifier = Modifier.align(Alignment.CenterEnd)
                 ) {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = Color(0xFFF8FAFC),
-                        shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp),
-                        tonalElevation = 8.dp,
-                        shadowElevation = 16.dp
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .statusBarsPadding()
-                                .navigationBarsPadding()
-                        ) {
-                            // 1. TOP APP BAR / CLOSE ROW
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(Color(0xFF2563EB)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("M", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .widthIn(max = 350.dp)
+                            .fillMaxWidth(0.85f)
+                            .clickable(
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                indication = null
+                            ) { }
+                            .pointerInput(Unit) {
+                                detectHorizontalDragGestures(
+                                    onDragStart = { drawerDragX = 0f },
+                                    onDragEnd = {
+                                        if (drawerDragX > 80f) {
+                                            closeDrawer()
+                                        }
+                                    },
+                                    onDragCancel = { drawerDragX = 0f },
+                                    onHorizontalDrag = { change, dragAmount ->
+                                        change.consume()
+                                        drawerDragX += dragAmount
+                                        if (drawerDragX > 80f) {
+                                            closeDrawer()
+                                        }
                                     }
-                                    Text(
-                                        text = "Meneger 2.0",
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF0F172A)
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { onShowDrawerChange(false) },
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Close Drawer",
-                                        tint = Color(0xFF64748B)
-                                    )
-                                }
+                                )
                             }
-
-                            // SCROLLABLE BODY
+                    ) {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = Color(0xFFF8FAFC),
+                            shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp),
+                            tonalElevation = 8.dp,
+                            shadowElevation = 16.dp
+                        ) {
                             Column(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(horizontal = 16.dp)
+                                    .fillMaxSize()
+                                    .statusBarsPadding()
+                                    .navigationBarsPadding()
                             ) {
-                                // 2. USER PROFILE HEADER CARD
-                                Surface(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = if (currentUser != null) Color(0xFF1E293B) else Color(0xFFE2E8F0).copy(alpha = 0.5f),
-                                    border = BorderStroke(1.dp, if (currentUser != null) Color(0xFF334155) else Color(0xFFCBD5E1))
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(14.dp)
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                        ) {
-                                            if (currentUser?.photoUrl != null) {
-                                                Image(
-                                                    painter = rememberAsyncImagePainter(currentUser.photoUrl),
-                                                    contentDescription = "User Avatar",
-                                                    modifier = Modifier
-                                                        .size(46.dp)
-                                                        .clip(CircleShape)
-                                                        .border(2.dp, Color(0xFF2563EB), CircleShape)
-                                                )
-                                            } else {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(46.dp)
-                                                        .clip(CircleShape)
-                                                        .background(
-                                                            Brush.linearGradient(
-                                                                listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
-                                                            )
-                                                        ),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    val letter = currentUser?.displayName?.take(1)?.uppercase()
-                                                        ?: currentUser?.email?.take(1)?.uppercase() ?: "G"
-                                                    Text(
-                                                        text = letter,
-                                                        color = Color.White,
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 20.sp
-                                                    )
-                                                }
-                                            }
-
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = if (currentUser != null) {
-                                                        currentUser.displayName ?: "ইউজার"
-                                                    } else {
-                                                        "অতিথি মোড (Guest)"
-                                                    },
-                                                    fontSize = 15.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (currentUser != null) Color.White else Color(0xFF0F172A),
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                                Text(
-                                                    text = if (currentUser != null) {
-                                                        currentUser.email ?: ""
-                                                    } else {
-                                                        "ক্লাউড ব্যাকআপের জন্য লগইন করুন"
-                                                    },
-                                                    fontSize = 11.sp,
-                                                    color = if (currentUser != null) Color(0xFF94A3B8) else Color(0xFF64748B),
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                        HorizontalDivider(color = if (currentUser != null) Color(0xFF334155) else Color(0xFFCBD5E1), thickness = 0.5.dp)
-                                        Spacer(modifier = Modifier.height(8.dp))
-
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(8.dp)
-                                                    .clip(CircleShape)
-                                                    .background(if (currentUser != null) Color(0xFF22C55E) else Color(0xFFEAB308))
-                                            )
-                                            Text(
-                                                text = if (currentUser != null) "Firebase Connected • master-63" else "Offline / Local Mode",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                color = if (currentUser != null) Color(0xFF86EFAC) else Color(0xFF475569)
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(18.dp))
-
-                                // 3. DATA & CLOUD MANAGEMENT SECTION
-                                Text(
-                                    text = "ক্লাউড ও ব্যাকআপ ম্যানেজমেন্ট ☁️",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF475569),
-                                    letterSpacing = 0.5.sp,
-                                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
-                                )
-
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = Color.White,
-                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(6.dp)
-                                    ) {
-                                        DrawerActionTile(
-                                            title = "ক্লাউডে পুশ করুন",
-                                            subtitle = "বর্তমান সব হিসাব ফায়ারবেসে সেভ করুন",
-                                            icon = Icons.Default.CloudUpload,
-                                            iconTint = Color(0xFF2563EB),
-                                            iconBgColor = Color(0xFFEFF6FF)
-                                        ) {
-                                            onShowDrawerChange(false)
-                                            if (currentUser != null) {
-                                                Toast.makeText(context, "ক্লাউডে ডাটা পাঠানো হচ্ছে... ☁️", Toast.LENGTH_SHORT).show()
-                                                viewModel.pushDataToCloud(showToast = true) { success, errorMsg ->
-                                                    if (success) {
-                                                        Toast.makeText(context, "ডাটা সফলভাবে ক্লাউডে সেভ হয়েছে! 🎉", Toast.LENGTH_SHORT).show()
-                                                    } else if (errorMsg != null) {
-                                                        Toast.makeText(context, "ক্লাউড পুশ ব্যর্থ: $errorMsg", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                            } else {
-                                                Toast.makeText(context, "পুশ করার আগে গুগল দিয়ে লগইন করুন", Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-
-                                        HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp, modifier = Modifier.padding(horizontal = 8.dp))
-
-                                        DrawerActionTile(
-                                            title = "ক্লাউড সিঙ্ক রিফ্রেশ",
-                                            subtitle = "ফায়ারবেস থেকে সব ডাটা রিস্টোর ও আপডেট করুন",
-                                            icon = Icons.Default.Sync,
-                                            iconTint = Color(0xFF0D9488),
-                                            iconBgColor = Color(0xFFF0FDFA)
-                                        ) {
-                                            onShowDrawerChange(false)
-                                            if (currentUser != null) {
-                                                viewModel.syncFromCloud(currentUser.uid)
-                                                Toast.makeText(context, "ক্লাউড থেকে ডাটা সিঙ্ক হচ্ছে... 🔄", Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                Toast.makeText(context, "সিঙ্ক করার আগে গুগল দিয়ে লগইন করুন", Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-
-                                        HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp, modifier = Modifier.padding(horizontal = 8.dp))
-
-                                        DrawerActionTile(
-                                            title = "লোকাল JSON ব্যাকআপ",
-                                            subtitle = "হিসাবের ব্যাকআপ ফাইল তৈরি বা কপি করুন",
-                                            icon = Icons.Default.Backup,
-                                            iconTint = Color(0xFF4F46E5),
-                                            iconBgColor = Color(0xFFEEF2FF)
-                                        ) {
-                                            onShowDrawerChange(false)
-                                            onBackupClick()
-                                        }
-
-                                        HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp, modifier = Modifier.padding(horizontal = 8.dp))
-
-                                        DrawerActionTile(
-                                            title = "লোকাল JSON রিস্টোর",
-                                            subtitle = "ব্যাকআপ ফাইল দিয়ে অ্যাপ রিস্টোর করুন",
-                                            icon = Icons.Default.Restore,
-                                            iconTint = Color(0xFF059669),
-                                            iconBgColor = Color(0xFFECFDF5)
-                                        ) {
-                                            onShowDrawerChange(false)
-                                            onRestoreClick()
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(14.dp))
-
-                                // 4. TRASH / RECYCLE BIN
-                                val drawerTrashItems by viewModel.trashItems.collectAsState()
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = Color.White,
-                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(6.dp)
-                                    ) {
-                                        DrawerActionTile(
-                                            title = "রিসাইকেল বিন (Trash)",
-                                            subtitle = "মুছে ফেলা হিসাব ও বাজার তালিকা দেখুন",
-                                            icon = Icons.Default.Delete,
-                                            iconTint = Color(0xFFDC2626),
-                                            iconBgColor = Color(0xFFFEF2F2),
-                                            badgeText = if (drawerTrashItems.isNotEmpty()) "${drawerTrashItems.size}টি" else null
-                                        ) {
-                                            onShowDrawerChange(false)
-                                            onOpenTrashClick()
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(14.dp))
-
-                                // 5. COLLAPSIBLE CREDENTIALS CARD
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = Color.White,
-                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(12.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable { showCredentials = !showCredentials },
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(28.dp)
-                                                        .clip(RoundedCornerShape(6.dp))
-                                                        .background(Color(0xFFFEF3C7)),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Info,
-                                                        contentDescription = null,
-                                                        tint = Color(0xFFD97706),
-                                                        modifier = Modifier.size(16.dp)
-                                                    )
-                                                }
-                                                Text(
-                                                    text = "অ্যাপ ও ফায়ারবেস তথ্য 🔑",
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color(0xFF1E293B)
-                                                )
-                                            }
-
-                                            Icon(
-                                                imageVector = if (showCredentials) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                                contentDescription = if (showCredentials) "Collapse" else "Expand",
-                                                tint = Color(0xFF64748B)
-                                            )
-                                        }
-
-                                        AnimatedVisibility(visible = showCredentials) {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(top = 12.dp),
-                                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                val packageName = context.packageName
-                                                val sha1 = remember { getCertificateFingerprint(context, "SHA-1") }
-                                                val sha256 = remember { getCertificateFingerprint(context, "SHA-256") }
-
-                                                ModernCredentialRow(label = "Package Name", value = packageName, context = context)
-                                                ModernCredentialRow(label = "Firebase Project ID", value = "master-63", context = context)
-                                                ModernCredentialRow(label = "SHA-1 Fingerprint", value = sha1, context = context)
-                                                ModernCredentialRow(label = "SHA-256 Fingerprint", value = sha256, context = context)
-                                            }
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-
-                            // 6. BOTTOM LOGIN / LOGOUT & VERSION FOOTER
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = Color.White,
-                                tonalElevation = 2.dp,
-                                shadowElevation = 8.dp,
-                                border = BorderStroke(1.dp, Color(0xFFE2E8F0))
-                            ) {
-                                Column(
+                                // 1. TOP APP BAR / BRAND & CLOSE
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                        .padding(horizontal = 18.dp, vertical = 14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Button(
-                                        onClick = {
-                                            onShowDrawerChange(false)
-                                            if (currentUser != null) {
-                                                viewModel.logoutAndClearLocal {
-                                                    coroutineScope.launch {
-                                                        try {
-                                                            credentialManager.clearCredentialState(ClearCredentialStateRequest())
-                                                        } catch (e: Exception) {
-                                                            android.util.Log.e("Auth", "Failed to clear credential state", e)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(
+                                                    Brush.linearGradient(
+                                                        listOf(Color(0xFF2563EB), Color(0xFF4F46E5))
+                                                    )
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("M", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                                        }
+                                        Column {
+                                            Text(
+                                                text = "Meneger 2.0",
+                                                fontSize = 17.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF0F172A)
+                                            )
+                                            Text(
+                                                text = "ব্যক্তিগত আয়-ব্যয় ট্র্যাকার",
+                                                fontSize = 10.5.sp,
+                                                color = Color(0xFF64748B)
+                                            )
+                                        }
+                                    }
+                                    IconButton(
+                                        onClick = { closeDrawer() },
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFF1F5F9))
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Close Drawer",
+                                            tint = Color(0xFF475569),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+
+                                HorizontalDivider(color = Color(0xFFE2E8F0), thickness = 0.5.dp)
+
+                                // SCROLLABLE BODY
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                                ) {
+                                    // 2. USER PROFILE HEADER CARD
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(18.dp),
+                                        color = Color.Transparent,
+                                        border = BorderStroke(1.dp, if (currentUser != null) Color(0xFF334155) else Color(0xFFE2E8F0)),
+                                        shadowElevation = if (currentUser != null) 4.dp else 1.dp
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(
+                                                    if (currentUser != null) {
+                                                        Brush.linearGradient(
+                                                            listOf(
+                                                                Color(0xFF0F172A),
+                                                                Color(0xFF1E293B),
+                                                                Color(0xFF1E1E38)
+                                                            )
+                                                        )
+                                                    } else {
+                                                        Brush.linearGradient(
+                                                            listOf(
+                                                                Color(0xFFF8FAFC),
+                                                                Color(0xFFEFF6FF)
+                                                            )
+                                                        )
+                                                    }
+                                                )
+                                                .padding(14.dp)
+                                        ) {
+                                            Column {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                                ) {
+                                                    if (currentUser?.photoUrl != null) {
+                                                        Image(
+                                                            painter = rememberAsyncImagePainter(currentUser.photoUrl),
+                                                            contentDescription = "User Avatar",
+                                                            modifier = Modifier
+                                                                .size(48.dp)
+                                                                .clip(CircleShape)
+                                                                .border(2.dp, Brush.linearGradient(listOf(Color(0xFF38BDF8), Color(0xFF818CF8))), CircleShape)
+                                                        )
+                                                    } else {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(48.dp)
+                                                                .clip(CircleShape)
+                                                                .background(
+                                                                    if (currentUser != null) {
+                                                                        Brush.linearGradient(listOf(Color(0xFF2563EB), Color(0xFF7C3AED)))
+                                                                    } else {
+                                                                        Brush.linearGradient(listOf(Color(0xFF94A3B8), Color(0xFF64748B)))
+                                                                    }
+                                                                ),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            if (currentUser != null) {
+                                                                val letter = currentUser.displayName?.take(1)?.uppercase()
+                                                                    ?: currentUser.email?.take(1)?.uppercase() ?: "U"
+                                                                Text(
+                                                                    text = letter,
+                                                                    color = Color.White,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontSize = 20.sp
+                                                                )
+                                                            } else {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.Person,
+                                                                    contentDescription = null,
+                                                                    tint = Color.White,
+                                                                    modifier = Modifier.size(24.dp)
+                                                                )
+                                                            }
                                                         }
-                                                        Toast.makeText(context, "লগআউট করা হয়েছে এবং লোকাল ডাটা ক্লিয়ার করা হয়েছে।", Toast.LENGTH_LONG).show()
+                                                    }
+
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = if (currentUser != null) {
+                                                                currentUser.displayName ?: "সম্মানিত ব্যবহারকারী"
+                                                            } else {
+                                                                "অতিথি মোড (Guest)"
+                                                            },
+                                                            fontSize = 15.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = if (currentUser != null) Color.White else Color(0xFF0F172A),
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                        Spacer(modifier = Modifier.height(2.dp))
+                                                        Text(
+                                                            text = if (currentUser != null) {
+                                                                currentUser.email ?: ""
+                                                            } else {
+                                                                "ক্লাউড ব্যাকআপের জন্য লগইন করুন"
+                                                            },
+                                                            fontSize = 11.5.sp,
+                                                            color = if (currentUser != null) Color(0xFF94A3B8) else Color(0xFF64748B),
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
                                                     }
                                                 }
-                                            } else {
-                                                launchGoogleSignIn()
+
+                                                Spacer(modifier = Modifier.height(10.dp))
+                                                HorizontalDivider(
+                                                    color = if (currentUser != null) Color(0xFF334155) else Color(0xFFE2E8F0),
+                                                    thickness = 0.5.dp
+                                                )
+                                                Spacer(modifier = Modifier.height(8.dp))
+
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(8.dp)
+                                                                .clip(CircleShape)
+                                                                .background(if (currentUser != null) Color(0xFF22C55E) else Color(0xFFF59E0B))
+                                                        )
+                                                        Text(
+                                                            text = if (currentUser != null) "Firebase Cloud • master-63" else "অফলাইন / লোকাল মোড",
+                                                            fontSize = 11.sp,
+                                                            fontWeight = FontWeight.Medium,
+                                                            color = if (currentUser != null) Color(0xFF86EFAC) else Color(0xFF64748B)
+                                                        )
+                                                    }
+
+                                                    if (currentUser == null) {
+                                                        Text(
+                                                            text = "লগইন করুন →",
+                                                            fontSize = 11.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = Color(0xFF2563EB),
+                                                            modifier = Modifier.clickable {
+                                                                closeDrawer()
+                                                                launchGoogleSignIn()
+                                                            }
+                                                        )
+                                                    }
+                                                }
                                             }
-                                        },
-                                        enabled = !isSigningIn,
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (currentUser != null) Color(0xFFDC2626) else Color(0xFF2563EB)
-                                        ),
-                                        shape = RoundedCornerShape(12.dp),
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(18.dp))
+
+                                    // 3. DATA & CLOUD MANAGEMENT SECTION
+                                    Text(
+                                        text = "ক্লাউড ও ব্যাকআপ ব্যবস্থাপনা ☁️",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF475569),
+                                        letterSpacing = 0.5.sp,
+                                        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+                                    )
+
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = Color.White,
+                                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(4.dp)
+                                        ) {
+                                            DrawerActionTile(
+                                                title = "ক্লাউডে ব্যাকআপ (Push)",
+                                                subtitle = "আপনার সব হিসাব ক্লাউডে নিরাপদ রাখুন",
+                                                icon = Icons.Default.CloudUpload,
+                                                iconTint = Color(0xFF2563EB),
+                                                iconBgColor = Color(0xFFEFF6FF)
+                                            ) {
+                                                closeDrawer()
+                                                if (currentUser != null) {
+                                                    Toast.makeText(context, "ক্লাউডে ডাটা পাঠানো হচ্ছে... ☁️", Toast.LENGTH_SHORT).show()
+                                                    viewModel.pushDataToCloud(showToast = true) { success, errorMsg ->
+                                                        if (success) {
+                                                            Toast.makeText(context, "ডাটা সফলভাবে ক্লাউডে সেভ হয়েছে! 🎉", Toast.LENGTH_SHORT).show()
+                                                        } else if (errorMsg != null) {
+                                                            Toast.makeText(context, "ক্লাউড পুশ ব্যর্থ: $errorMsg", Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    }
+                                                } else {
+                                                    Toast.makeText(context, "পুশ করার আগে গুগল দিয়ে লগইন করুন", Toast.LENGTH_LONG).show()
+                                                }
+                                            }
+
+                                            HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp, modifier = Modifier.padding(horizontal = 8.dp))
+
+                                            DrawerActionTile(
+                                                title = "ক্লাউড সিঙ্ক রিফ্রেশ (Sync)",
+                                                subtitle = "ক্লাউড থেকে পূর্বের হিসাব ফিরিয়ে আনুন",
+                                                icon = Icons.Default.Sync,
+                                                iconTint = Color(0xFF0D9488),
+                                                iconBgColor = Color(0xFFF0FDFA)
+                                            ) {
+                                                closeDrawer()
+                                                if (currentUser != null) {
+                                                    viewModel.syncFromCloud(currentUser.uid)
+                                                    Toast.makeText(context, "ক্লাউড থেকে ডাটা সিঙ্ক হচ্ছে... 🔄", Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    Toast.makeText(context, "সিঙ্ক করার আগে গুগল দিয়ে লগইন করুন", Toast.LENGTH_LONG).show()
+                                                }
+                                            }
+
+                                            HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp, modifier = Modifier.padding(horizontal = 8.dp))
+
+                                            DrawerActionTile(
+                                                title = "লোকাল JSON ব্যাকআপ",
+                                                subtitle = "হিসাবের ফাইল সংরক্ষণ বা শেয়ার করুন",
+                                                icon = Icons.Default.Backup,
+                                                iconTint = Color(0xFF4F46E5),
+                                                iconBgColor = Color(0xFFEEF2FF)
+                                            ) {
+                                                closeDrawer()
+                                                onBackupClick()
+                                            }
+
+                                            HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp, modifier = Modifier.padding(horizontal = 8.dp))
+
+                                            DrawerActionTile(
+                                                title = "লোকাল JSON রিস্টোর",
+                                                subtitle = "ব্যাকআপ ফাইল থেকে হিসাব রিস্টোর করুন",
+                                                icon = Icons.Default.Restore,
+                                                iconTint = Color(0xFF059669),
+                                                iconBgColor = Color(0xFFECFDF5)
+                                            ) {
+                                                closeDrawer()
+                                                onRestoreClick()
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(16.dp))
+
+                                    // 4. TRASH / RECYCLE BIN
+                                    Text(
+                                        text = "অতিরিক্ত টুলস 🗂️",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF475569),
+                                        letterSpacing = 0.5.sp,
+                                        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+                                    )
+
+                                    val drawerTrashItems by viewModel.trashItems.collectAsState()
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = Color.White,
+                                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(4.dp)
+                                        ) {
+                                            DrawerActionTile(
+                                                title = "রিসাইকেল বিন (Trash)",
+                                                subtitle = "মুছে ফেলা হিসাব ও বাজার তালিকা দেখুন",
+                                                icon = Icons.Default.Delete,
+                                                iconTint = Color(0xFFE11D48),
+                                                iconBgColor = Color(0xFFFFF1F2),
+                                                badgeText = if (drawerTrashItems.isNotEmpty()) "${drawerTrashItems.size}টি" else null
+                                            ) {
+                                                closeDrawer()
+                                                onOpenTrashClick()
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(16.dp))
+
+                                    // 5. COLLAPSIBLE CREDENTIALS CARD
+                                    Text(
+                                        text = "ডেভেলপার ও টেকনিক্যাল তথ্য 🛠️",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF475569),
+                                        letterSpacing = 0.5.sp,
+                                        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+                                    )
+
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = Color.White,
+                                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(14.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable(
+                                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                                        indication = null
+                                                    ) { showCredentials = !showCredentials },
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(32.dp)
+                                                            .clip(RoundedCornerShape(8.dp))
+                                                            .background(Color(0xFFFEF3C7)),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Key,
+                                                            contentDescription = null,
+                                                            tint = Color(0xFFD97706),
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                    Column {
+                                                        Text(
+                                                            text = "ফায়ারবেস ও ডেভেলপার তথ্য 🔑",
+                                                            fontSize = 13.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = Color(0xFF1E293B)
+                                                        )
+                                                        Text(
+                                                            text = if (showCredentials) "লুকাতে ট্যাপ করুন" else "কপি করতে বিস্তার করুন",
+                                                            fontSize = 11.sp,
+                                                            color = Color(0xFF64748B)
+                                                        )
+                                                    }
+                                                }
+
+                                                IconButton(
+                                                    onClick = { showCredentials = !showCredentials },
+                                                    modifier = Modifier.size(32.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (showCredentials) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                                        contentDescription = if (showCredentials) "সংকোচন করুন" else "বিস্তার করুন",
+                                                        tint = Color(0xFF64748B)
+                                                    )
+                                                }
+                                            }
+
+                                            AnimatedVisibility(
+                                                visible = showCredentials,
+                                                enter = expandVertically() + fadeIn(),
+                                                exit = shrinkVertically() + fadeOut()
+                                            ) {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(top = 14.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                                ) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(8.dp),
+                                                        color = Color(0xFFEFF6FF),
+                                                        modifier = Modifier.fillMaxWidth()
+                                                    ) {
+                                                        Text(
+                                                            text = "💡 যেকোনো তথ্যে ট্যাপ করে তাৎক্ষণিক কপি করতে পারেন।",
+                                                            fontSize = 11.sp,
+                                                            color = Color(0xFF1D4ED8),
+                                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                                        )
+                                                    }
+
+                                                    val packageName = context.packageName
+                                                    val sha1 = remember { getCertificateFingerprint(context, "SHA-1") }
+                                                    val sha256 = remember { getCertificateFingerprint(context, "SHA-256") }
+
+                                                    ModernCredentialRow(
+                                                        label = "Package Name",
+                                                        value = packageName,
+                                                        context = context,
+                                                        tag = "PACKAGE"
+                                                    )
+                                                    ModernCredentialRow(
+                                                        label = "Firebase Project ID",
+                                                        value = "master-63",
+                                                        context = context,
+                                                        tag = "PROJECT"
+                                                    )
+                                                    ModernCredentialRow(
+                                                        label = "SHA-1 Fingerprint",
+                                                        value = sha1,
+                                                        context = context,
+                                                        tag = "SHA-1"
+                                                    )
+                                                    ModernCredentialRow(
+                                                        label = "SHA-256 Fingerprint",
+                                                        value = sha256,
+                                                        context = context,
+                                                        tag = "SHA-256"
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+
+                                // 6. BOTTOM LOGIN / LOGOUT & VERSION FOOTER
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = Color.White,
+                                    tonalElevation = 2.dp,
+                                    shadowElevation = 8.dp,
+                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                                ) {
+                                    Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(48.dp),
-                                        contentPadding = PaddingValues(horizontal = 16.dp)
+                                            .padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        if (isSigningIn) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(20.dp),
-                                                color = Color.White,
-                                                strokeWidth = 2.dp
-                                            )
-                                        } else {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = if (currentUser != null) Icons.Default.Logout else Icons.Default.Login,
-                                                    contentDescription = null,
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(18.dp)
+                                        Button(
+                                            onClick = {
+                                                if (currentUser != null) {
+                                                    closeDrawer()
+                                                    viewModel.logoutAndClearLocal {
+                                                        drawerScope.launch {
+                                                            try {
+                                                                credentialManager.clearCredentialState(ClearCredentialStateRequest())
+                                                            } catch (e: Exception) {
+                                                                android.util.Log.e("Auth", "Failed to clear credential state", e)
+                                                            }
+                                                            Toast.makeText(context, "লগআউট করা হয়েছে এবং লোকাল ডাটা ক্লিয়ার করা হয়েছে।", Toast.LENGTH_LONG).show()
+                                                        }
+                                                    }
+                                                } else {
+                                                    launchGoogleSignIn()
+                                                }
+                                            },
+                                            enabled = !isSigningIn,
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (currentUser != null) Color(0xFFDC2626) else Color(0xFF2563EB)
+                                            ),
+                                            shape = RoundedCornerShape(14.dp),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(50.dp),
+                                            contentPadding = PaddingValues(horizontal = 16.dp)
+                                        ) {
+                                            if (isSigningIn) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(20.dp),
+                                                    color = Color.White,
+                                                    strokeWidth = 2.dp
                                                 )
+                                                Spacer(modifier = Modifier.width(10.dp))
                                                 Text(
-                                                    text = if (currentUser != null) "লগআউট করুন" else "গুগল দিয়ে লগইন",
+                                                    text = "সাইন ইন করা হচ্ছে...",
                                                     color = Color.White,
                                                     fontSize = 14.sp,
                                                     fontWeight = FontWeight.Bold
                                                 )
+                                            } else {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (currentUser != null) Icons.Default.Logout else Icons.Default.Login,
+                                                        contentDescription = null,
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                    Text(
+                                                        text = if (currentUser != null) "লগআউট করুন" else "গুগল দিয়ে সাইন ইন (Google Sign-In)",
+                                                        color = Color.White,
+                                                        fontSize = 14.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
                                             }
                                         }
-                                    }
 
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(
-                                        text = "Meneger 2.0 • Pro Finance v2.0",
-                                        fontSize = 10.sp,
-                                        color = Color(0xFF94A3B8)
-                                    )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Meneger v2.0 • ব্যক্তিগত হিসাব খাতা",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFF94A3B8)
+                                        )
+                                    }
                                 }
                             }
                         }
