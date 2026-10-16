@@ -2295,7 +2295,8 @@ fun AppHeader(
 
     fun launchGoogleSignIn() {
         val clientId = try {
-            context.getString(R.string.default_web_client_id)
+            val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+            if (resId != 0) context.getString(resId) else context.getString(R.string.default_web_client_id)
         } catch (e: Exception) {
             Toast.makeText(context, "Google Sign-In configuration missing: default_web_client_id not found", Toast.LENGTH_LONG).show()
             return
@@ -2333,7 +2334,8 @@ fun AppHeader(
     LaunchedEffect(Unit) {
         if (FirebaseAuth.getInstance().currentUser == null) {
             try {
-                val clientId = context.getString(R.string.default_web_client_id)
+                val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+                val clientId = if (resId != 0) context.getString(resId) else context.getString(R.string.default_web_client_id)
                 val googleIdOption = GetGoogleIdOption.Builder()
                     .setFilterByAuthorizedAccounts(true)
                     .setServerClientId(clientId)

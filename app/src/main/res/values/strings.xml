@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Meneger 2.0</string>
+    <string name="default_web_client_id" translatable="false">130566504336-0atgbvgvnc4o1og1tanifnl8ot2a1od5.apps.googleusercontent.com</string>
 </resources>
