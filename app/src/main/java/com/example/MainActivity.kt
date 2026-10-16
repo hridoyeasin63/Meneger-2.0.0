@@ -1441,6 +1441,15 @@ class FinanceViewModelFactory(
     }
 }
 
+fun Context.findActivity(): Activity? {
+    var current = this
+    while (current is android.content.ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return null
+}
+
 fun initFirebase(context: Context) {
     try {
         if (com.google.firebase.FirebaseApp.getApps(context).isEmpty()) {
@@ -1466,10 +1475,15 @@ class MainActivity : ComponentActivity() {
             val view = LocalView.current
             if (!view.isInEditMode) {
                 SideEffect {
-                    val window = (view.context as Activity).window
-                    window.statusBarColor = android.graphics.Color.parseColor("#2563EB")
-                    window.navigationBarColor = android.graphics.Color.parseColor("#2563EB")
-                    WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+                    try {
+                        val activity = view.context.findActivity() ?: this@MainActivity
+                        val window = activity.window
+                        window.statusBarColor = android.graphics.Color.parseColor("#2563EB")
+                        window.navigationBarColor = android.graphics.Color.parseColor("#2563EB")
+                        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+                    } catch (e: Throwable) {
+                        e.printStackTrace()
+                    }
                 }
             }
 
@@ -1521,7 +1535,15 @@ fun FinanceApp(
     viewModel: FinanceViewModel
 ) {
     val context = LocalContext.current
-    val marketViewModel: com.example.ui.MarketViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = com.example.ui.MarketViewModel.Factory)
+    val marketViewModel: com.example.ui.MarketViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                val db = AppDatabase.getDatabase(context.applicationContext)
+                return com.example.ui.MarketViewModel(com.example.data.MarketItemRepository(db.marketItemDao())) as T
+            }
+        }
+    )
     val expenseViewModel: com.example.ui.viewmodel.ExpenseViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
         factory = com.example.ui.viewmodel.ExpenseViewModelFactory(
             com.example.data.repository.ExpenseRepository(
@@ -2308,7 +2330,12 @@ fun AppHeader(
 
         coroutineScope.launch {
             try {
-                val result = credentialManager.getCredential(context as Activity, request)
+                val activity = context.findActivity()
+                if (activity == null) {
+                    Toast.makeText(context, "Activity context is unavailable", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                val result = credentialManager.getCredential(activity, request)
                 val credential = result.credential
                 if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                     val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data).idToken

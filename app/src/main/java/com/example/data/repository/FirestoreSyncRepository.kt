@@ -40,39 +40,48 @@ fun handleFirestoreError(error: Exception, operation: OperationType, path: Strin
 }
 
 class FirestoreSyncRepository(
-    private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val firestore: FirebaseFirestore?,
+    private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (e: Throwable) { null }
 ) {
     constructor(context: Context) : this(
         resolveFirestore(context),
-        FirebaseAuth.getInstance()
+        try { FirebaseAuth.getInstance() } catch (e: Throwable) { null }
     )
 
     companion object {
-        private fun resolveFirestore(context: Context): FirebaseFirestore {
-            val app = FirebaseApp.getInstance()
+        private fun resolveFirestore(context: Context): FirebaseFirestore? {
             return try {
-                val dbId = context.applicationContext.getString(R.string.firestore_database_id)
-                if (dbId.isNotBlank() && dbId != "(default)") {
+                if (FirebaseApp.getApps(context).isEmpty()) {
+                    FirebaseApp.initializeApp(context.applicationContext)
+                }
+                val app = FirebaseApp.getInstance()
+                val dbId = try {
+                    context.applicationContext.getString(R.string.firestore_database_id)
+                } catch (e: Exception) {
+                    null
+                }
+                if (!dbId.isNullOrBlank() && dbId != "(default)") {
                     FirebaseFirestore.getInstance(app, dbId)
                 } else {
                     FirebaseFirestore.getInstance(app)
                 }
-            } catch (e: Exception) {
-                FirebaseFirestore.getInstance(app)
+            } catch (e: Throwable) {
+                Log.w("FirestoreSyncRepo", "Firestore initialization skipped: ${e.message}")
+                null
             }
         }
     }
 
     private fun requireUserId(): String {
-        return auth.currentUser?.uid
+        return auth?.currentUser?.uid
             ?: throw IllegalStateException("User must be signed in before accessing Firestore.")
     }
 
     suspend fun pushUserData(dataJson: String): Result<Unit> {
+        val fs = firestore ?: return Result.failure(IllegalStateException("Firestore is not initialized."))
         return try {
             val uid = requireUserId()
-            val docRef = firestore.collection("users").document(uid).collection("userData").document("sync")
+            val docRef = fs.collection("users").document(uid).collection("userData").document("sync")
             val snapshot = docRef.get().await()
 
             if (!snapshot.exists()) {
@@ -101,9 +110,10 @@ class FirestoreSyncRepository(
     }
 
     suspend fun fetchUserData(): Result<String?> {
+        val fs = firestore ?: return Result.failure(IllegalStateException("Firestore is not initialized."))
         return try {
             val uid = requireUserId()
-            val docRef = firestore.collection("users").document(uid).collection("userData").document("sync")
+            val docRef = fs.collection("users").document(uid).collection("userData").document("sync")
             val snapshot = docRef.get().await()
             if (snapshot.exists()) {
                 val dataJson = snapshot.getString("dataJson")
@@ -119,8 +129,9 @@ class FirestoreSyncRepository(
     }
 
     fun observeUserData(): Flow<String?> = flow {
+        val fs = firestore ?: return@flow
         val uid = requireUserId()
-        val docRef = firestore.collection("users").document(uid).collection("userData").document("sync")
+        val docRef = fs.collection("users").document(uid).collection("userData").document("sync")
         docRef.snapshots()
             .map { it.getString("dataJson") }
             .catch { error ->
