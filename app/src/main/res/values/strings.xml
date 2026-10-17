@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">Meneger 2.0</string>
     <string name="default_web_client_id" translatable="false">130566504336-0atgbvgvnc4o1og1tanifnl8ot2a1od5.apps.googleusercontent.com</string>
+    <string name="google_app_id" translatable="false">1:130566504336:android:ed9c3d833d6426ae587d15</string>
+    <string name="google_api_key" translatable="false">AIzaSyBrj7GIIcSWZE0LTaT_qKXGinU1LECaiHc</string>
+    <string name="gcm_defaultSenderId" translatable="false">130566504336</string>
+    <string name="google_storage_bucket" translatable="false">master-63.firebasestorage.app</string>
+    <string name="project_id" translatable="false">master-63</string>
+    <string name="firestore_database_id" translatable="false">ai-studio-android-meneger2-a4b24310-6ba1-431e-8e66-a742b9d8f31d</string>
 </resources>

@@ -19,6 +19,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
+import java.net.InetSocketAddress
+import java.net.Socket
 
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE)
@@ -29,41 +31,64 @@ abstract class FirestoreEmulatorTestBase {
   protected lateinit var auth: FirebaseAuth
   protected lateinit var databaseId: String
 
+  fun isEmulatorRunning(): Boolean {
+    return try {
+      Socket().use { socket ->
+        socket.connect(InetSocketAddress(EMULATOR_HOST, FIRESTORE_PORT), 300)
+        true
+      }
+    } catch (_: Exception) {
+      false
+    }
+  }
+
   @Before
   open fun setUpFirebase() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val resId = context.resources.getIdentifier("firestore_database_id", "string", context.packageName)
     databaseId = if (resId != 0) context.getString(resId) else "demo-database"
 
-    val app = if (FirebaseApp.getApps(context).isEmpty()) {
-      val newApp = FirebaseApp.initializeApp(
-        context,
-        FirebaseOptions.Builder()
-          .setApplicationId("com.example.app")
-          .setProjectId(PROJECT_ID)
-          .setApiKey("fake-api-key-for-emulator")
-          .build()
-      )
-      val newFirestore = FirebaseFirestore.getInstance(newApp, databaseId)
-      newFirestore.useEmulator(EMULATOR_HOST, FIRESTORE_PORT)
-      newFirestore.firestoreSettings = FirebaseFirestoreSettings.Builder()
-        .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
+    val existingApp = FirebaseApp.getApps(context).firstOrNull { it.name == FirebaseApp.DEFAULT_APP_NAME }
+    val app = existingApp ?: FirebaseApp.initializeApp(
+      context,
+      FirebaseOptions.Builder()
+        .setApplicationId("com.example.app")
+        .setProjectId(PROJECT_ID)
+        .setApiKey("fake-api-key-for-emulator")
         .build()
+    )
 
-      val newAuth = FirebaseAuth.getInstance(newApp)
-      newAuth.useEmulator(EMULATOR_HOST, AUTH_PORT)
-      newApp
-    } else {
-      FirebaseApp.getInstance()
+    firestore = try {
+      if (databaseId.isNotEmpty() && databaseId != "(default)") {
+        FirebaseFirestore.getInstance(app, databaseId)
+      } else {
+        FirebaseFirestore.getInstance(app)
+      }
+    } catch (_: Throwable) {
+      FirebaseFirestore.getInstance(app)
     }
 
-    firestore = FirebaseFirestore.getInstance(app, databaseId)
     auth = FirebaseAuth.getInstance(app)
+
+    if (isEmulatorRunning()) {
+      try {
+        firestore.useEmulator(EMULATOR_HOST, FIRESTORE_PORT)
+        firestore.firestoreSettings = FirebaseFirestoreSettings.Builder()
+          .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
+          .build()
+      } catch (_: Throwable) {}
+
+      try {
+        auth.useEmulator(EMULATOR_HOST, AUTH_PORT)
+      } catch (_: Throwable) {}
+    }
   }
 
   @After
   open fun tearDownFirebase() {
-    auth.signOut()
+    try {
+      auth.signOut()
+    } catch (_: Throwable) {}
   }
 
   protected suspend fun signInTestUser(email: String): String = withContext(Dispatchers.IO) {
@@ -77,7 +102,7 @@ abstract class FirestoreEmulatorTestBase {
     }
   }
 
-  private companion object {
+  protected companion object {
     const val EMULATOR_HOST = "127.0.0.1"
     const val FIRESTORE_PORT = 8085
     const val AUTH_PORT = 9099

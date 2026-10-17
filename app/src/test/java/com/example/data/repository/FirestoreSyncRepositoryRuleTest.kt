@@ -8,12 +8,14 @@ import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 class FirestoreSyncRepositoryRuleTest : FirestoreEmulatorTestBase() {
 
     @Test
     fun pushAndFetchUserData_authenticatedUser_succeeds() = runBlocking {
+        assumeTrue("Firestore emulator is not running", isEmulatorRunning())
         val aliceUid = signInTestUser(ALICE_EMAIL)
         val repo = FirestoreSyncRepository(firestore, auth)
 
@@ -43,6 +45,7 @@ class FirestoreSyncRepositoryRuleTest : FirestoreEmulatorTestBase() {
 
     @Test
     fun crossUserAccess_cannotReadOtherUserData() = runBlocking {
+        assumeTrue("Firestore emulator is not running", isEmulatorRunning())
         val aliceUid = signInTestUser(ALICE_EMAIL)
         val aliceRepo = FirestoreSyncRepository(firestore, auth)
         val sampleJson = """{"transactions":[{"id":2,"amount":1000.0}],"version":1}"""

@@ -41,34 +41,20 @@ fun handleFirestoreError(error: Exception, operation: OperationType, path: Strin
 
 class FirestoreSyncRepository(
     private val firestore: FirebaseFirestore?,
-    private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (e: Throwable) { null }
+    private val auth: FirebaseAuth? = null
 ) {
     constructor(context: Context) : this(
         resolveFirestore(context),
-        try { FirebaseAuth.getInstance() } catch (e: Throwable) { null }
+        resolveAuth(context)
     )
 
     companion object {
         private fun resolveFirestore(context: Context): FirebaseFirestore? {
-            return try {
-                if (FirebaseApp.getApps(context).isEmpty()) {
-                    FirebaseApp.initializeApp(context.applicationContext)
-                }
-                val app = FirebaseApp.getInstance()
-                val dbId = try {
-                    context.applicationContext.getString(R.string.firestore_database_id)
-                } catch (e: Exception) {
-                    null
-                }
-                if (!dbId.isNullOrBlank() && dbId != "(default)") {
-                    FirebaseFirestore.getInstance(app, dbId)
-                } else {
-                    FirebaseFirestore.getInstance(app)
-                }
-            } catch (e: Throwable) {
-                Log.w("FirestoreSyncRepo", "Firestore initialization skipped: ${e.message}")
-                null
-            }
+            return com.example.MenegerApplication.getFirebaseFirestoreSafe(context)
+        }
+
+        private fun resolveAuth(context: Context): FirebaseAuth? {
+            return com.example.MenegerApplication.getFirebaseAuthSafe(context)
         }
     }
 

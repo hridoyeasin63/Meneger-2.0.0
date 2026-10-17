@@ -523,7 +523,7 @@ class FinanceViewModel(
 
     // Firebase and Google Sign-In state
     var currentUserState by mutableStateOf<FirebaseUser?>(
-        try { FirebaseAuth.getInstance().currentUser } catch (e: Throwable) { null }
+        try { com.example.MenegerApplication.getFirebaseAuthSafe()?.currentUser } catch (e: Throwable) { null }
     )
     var isSyncingFromCloud by mutableStateOf(false)
     var isConnectingToCloud by mutableStateOf(false)
@@ -558,7 +558,7 @@ class FinanceViewModel(
                 val dbExps = dbExpsDef.await()
                 val dbProf = dao.getProfileFlow().first()
 
-                val user = try { FirebaseAuth.getInstance().currentUser } catch (e: Throwable) { null }
+                val user = try { com.example.MenegerApplication.getFirebaseAuthSafe()?.currentUser } catch (e: Throwable) { null }
                 if (user != null) {
                     val hasData = dbTxs.isNotEmpty() || dbPersons.isNotEmpty() || dbNotices.isNotEmpty() || dbMarket.isNotEmpty() || dbCats.isNotEmpty() || dbExps.isNotEmpty() || (dbProf != null && (dbProf.openingBalance != 0.0 || dbProf.monthlySalary != 0.0))
                     if (!hasData) {
@@ -604,7 +604,7 @@ class FinanceViewModel(
 
         // Listen for Firebase Auth changes
         try {
-            FirebaseAuth.getInstance().addAuthStateListener { auth ->
+            com.example.MenegerApplication.getFirebaseAuthSafe()?.addAuthStateListener { auth ->
                 try {
                     val user = auth.currentUser
                     val oldUser = currentUserState
@@ -627,7 +627,7 @@ class FinanceViewModel(
     fun pushDataToCloud(showToast: Boolean = false, onComplete: ((Boolean, String?) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val user = try { FirebaseAuth.getInstance().currentUser } catch (e: Throwable) { null }
+                val user = try { com.example.MenegerApplication.getFirebaseAuthSafe()?.currentUser } catch (e: Throwable) { null }
                 if (user == null) {
                     withContext(Dispatchers.Main) {
                         onComplete?.invoke(false, "User not signed in")
@@ -739,7 +739,7 @@ class FinanceViewModel(
             } finally {
                 isSyncingFromCloud = false
                 try {
-                    FirebaseAuth.getInstance().signOut()
+                    com.example.MenegerApplication.getFirebaseAuthSafe()?.signOut()
                 } catch (e: Throwable) {
                     e.printStackTrace()
                 }
@@ -1455,13 +1455,7 @@ fun Context.findActivity(): Activity? {
 }
 
 fun initFirebase(context: Context) {
-    try {
-        if (com.google.firebase.FirebaseApp.getApps(context).isEmpty()) {
-            com.google.firebase.FirebaseApp.initializeApp(context.applicationContext)
-        }
-    } catch (e: Throwable) {
-        e.printStackTrace()
-    }
+    com.example.MenegerApplication.initFirebase(context)
 }
 
 // ============================================================================
@@ -2223,7 +2217,7 @@ fun ModernCredentialRow(label: String, value: String, context: Context, tag: Str
 @Composable
 fun DrawerActionTile(
     title: String,
-    subtitle: String,
+    subtitle: String? = null,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     iconTint: Color,
     iconBgColor: Color,
@@ -2239,13 +2233,13 @@ fun DrawerActionTile(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 10.dp),
+                .padding(horizontal = 10.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(iconBgColor),
                 contentAlignment = Alignment.Center
             ) {
@@ -2253,7 +2247,7 @@ fun DrawerActionTile(
                     imageVector = icon,
                     contentDescription = title,
                     tint = iconTint,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -2264,14 +2258,16 @@ fun DrawerActionTile(
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF0F172A)
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    fontSize = 11.sp,
-                    color = Color(0xFF64748B),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (!subtitle.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(1.dp))
+                    Text(
+                        text = subtitle,
+                        fontSize = 11.sp,
+                        color = Color(0xFF64748B),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
             if (badgeText != null) {
                 Surface(
@@ -2331,13 +2327,7 @@ fun AppHeader(
             Toast.makeText(context, "Credential Manager is unavailable on this device", Toast.LENGTH_SHORT).show()
             return
         }
-        val clientId = try {
-            val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
-            if (resId != 0) context.getString(resId) else context.getString(R.string.default_web_client_id)
-        } catch (e: Throwable) {
-            Toast.makeText(context, "Google Sign-In configuration missing: default_web_client_id not found", Toast.LENGTH_LONG).show()
-            return
-        }
+        val clientId = com.example.MenegerApplication.getGoogleWebClientId(context)
 
         isSigningIn = true
         val signInOption = GetSignInWithGoogleOption.Builder(serverClientId = clientId).build()
@@ -2355,9 +2345,16 @@ fun AppHeader(
                 if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                     val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
                     val authCredential = GoogleAuthProvider.getCredential(googleIdToken, null)
-                    FirebaseAuth.getInstance().signInWithCredential(authCredential).await()
-                    viewModel.currentUserState = try { FirebaseAuth.getInstance().currentUser } catch (e: Throwable) { null }
-                    Toast.makeText(context, "গুগল সাইন-ইন সফল হয়েছে! 🎉", Toast.LENGTH_SHORT).show()
+                    com.example.MenegerApplication.initFirebase(context)
+                    val auth = com.example.MenegerApplication.getFirebaseAuthSafe(context)
+                        ?: try { FirebaseAuth.getInstance() } catch (t: Throwable) { null }
+                    if (auth == null) {
+                        Toast.makeText(context, "Firebase initialization failed. Please check network/config.", Toast.LENGTH_LONG).show()
+                        return@launch
+                    }
+                    auth.signInWithCredential(authCredential).await()
+                    viewModel.currentUserState = try { auth.currentUser } catch (e: Throwable) { null }
+                    Toast.makeText(context, "Signed in successfully! 🎉", Toast.LENGTH_SHORT).show()
                     showAuthDialog = false
                 } else {
                     Toast.makeText(context, "Unexpected credential type", Toast.LENGTH_SHORT).show()
@@ -2366,7 +2363,7 @@ fun AppHeader(
                 android.util.Log.w("Auth", "Google Sign-In flow cancelled or dismissed: ${e.message}", e)
             } catch (e: Throwable) {
                 android.util.Log.e("Auth", "Google Sign-In failed", e)
-                Toast.makeText(context, "সাইন-ইন ব্যর্থ হয়েছে: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Sign-in failed: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
             } finally {
                 isSigningIn = false
             }
@@ -2375,19 +2372,15 @@ fun AppHeader(
 
     LaunchedEffect(Unit) {
         try {
-            val user = try { FirebaseAuth.getInstance().currentUser } catch (e: Throwable) { null }
+            val auth = com.example.MenegerApplication.getFirebaseAuthSafe(context) ?: return@LaunchedEffect
+            val user = try { auth.currentUser } catch (e: Throwable) { null }
             if (user != null) {
                 viewModel.currentUserState = user
             } else {
                 val cm = credentialManager ?: return@LaunchedEffect
                 val activity = context.findActivity() ?: return@LaunchedEffect
-                val clientId = try {
-                    val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
-                    if (resId != 0) context.getString(resId) else context.getString(R.string.default_web_client_id)
-                } catch (e: Throwable) {
-                    null
-                }
-                if (!clientId.isNullOrBlank()) {
+                val clientId = com.example.MenegerApplication.getGoogleWebClientId(context)
+                if (clientId.isNotBlank()) {
                     val googleIdOption = GetGoogleIdOption.Builder()
                         .setFilterByAuthorizedAccounts(true)
                         .setServerClientId(clientId)
@@ -2399,8 +2392,8 @@ fun AppHeader(
                     if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                         val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
                         val authCredential = GoogleAuthProvider.getCredential(googleIdToken, null)
-                        FirebaseAuth.getInstance().signInWithCredential(authCredential).await()
-                        viewModel.currentUserState = try { FirebaseAuth.getInstance().currentUser } catch (e: Throwable) { null }
+                        auth.signInWithCredential(authCredential).await()
+                        viewModel.currentUserState = try { auth.currentUser } catch (e: Throwable) { null }
                     }
                 }
             }
